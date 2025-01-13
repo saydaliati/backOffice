@@ -6,5 +6,7 @@ export interface Pharmacy {
     openHour: string;
     closeHour: string;
     phone: string;
+    latitude: number;
+    longitude: number;
     status: 'open' | 'closed';
 }

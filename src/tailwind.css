@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes modalUp {
+    0% {
+        opacity: 0;
+        transform: scale(0.98) translateY(15px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.animate-modal-up {
+    animation: modalUp 0.3s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+}
 
 @layer components {
     html {
