@@ -168,5 +168,7 @@
     "type to confirm": "Tapez Nom pour confirmer la suppression",
     "deleting": "Suppression en cours...",
     "pharmacy deleted": "La pharmacie a été supprimée avec succès",
-    "error deleting pharmacy": "Une erreur est survenue lors de la suppression"
+    "error deleting pharmacy": "Une erreur est survenue lors de la suppression",
+    "List pharmacies": "Liste des pharmacies",
+    "all": "Tous"
 }

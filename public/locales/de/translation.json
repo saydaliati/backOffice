@@ -170,5 +170,7 @@
     "type name to confirm": "Name zum Bestätigen eingeben",
     "deleting": "Wird gelöscht...",
     "pharmacy deleted": "Apotheke wurde erfolgreich gelöscht",
-    "error deleting pharmacy": "Fehler beim Löschen der Apotheke"
+    "error deleting pharmacy": "Fehler beim Löschen der Apotheke",
+    "List pharmacies": "Liste der Apotheken",
+    "all": "Alle"
 }
