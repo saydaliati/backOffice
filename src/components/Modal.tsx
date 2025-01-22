@@ -19,7 +19,7 @@ const Modal = ({ isOpen, onClose, title, description, children, size = 'md', isR
 
     const sizeClasses = {
         sm: 'max-w-md',
-        md: 'max-w-lg',
+        md: 'max-w-4xl',
         lg: 'max-w-2xl',
         xl: 'max-w-4xl'
     };

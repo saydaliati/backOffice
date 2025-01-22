@@ -1,101 +1,88 @@
+import { useState } from 'react';
 import { useFormik } from 'formik';
 import { useTranslation } from 'react-i18next';
-import { Building2, MapPin, Phone, Clock, X, Upload } from 'lucide-react';
-import { pharmacySchema, PHARMACY_VALIDATION } from '../validations/pharmacySchema';
+import { Building2, MapPin, Phone, X, Upload } from 'lucide-react';
+import { pharmacyFormSchema } from '../validations/pharmacySchema';
 import InputField from './InputField';
+import { Pharmacy } from '../types/pharmacy';
 
 interface PharmacyUpdateFormProps {
     pharmacy: Pharmacy;
-    onSubmit: (values: any) => void;
+    onSubmit: (formData: FormData) => Promise<void>;
     onCancel: () => void;
     isLoading?: boolean;
     isRTL?: boolean;
 }
 
-interface Pharmacy {
-    id: string;
-    image: string;
-    name: string;
-    address: string;
-    openHour: string;
-    closeHour: string;
-    phone: string;
-    status: 'open' | 'closed';
-}
-
 const PharmacyUpdateForm = ({ pharmacy, onSubmit, onCancel, isLoading, isRTL }: PharmacyUpdateFormProps) => {
     const { t } = useTranslation();
+    const [preview, setPreview] = useState<string>(pharmacy.image || '');
 
-    const {
-        handleSubmit,
-        handleChange,
-        setFieldValue,
-        values,
-        touched,
-        errors,
-    } = useFormik({
+    const formik = useFormik({
         initialValues: {
             name: pharmacy.name,
             address: pharmacy.address,
-            phone: pharmacy.phone,
-            openHour: pharmacy.openHour,
-            closeHour: pharmacy.closeHour,
+            telephone: pharmacy.telephone,
+            openHours: pharmacy.openHours,
+            closeHours: pharmacy.closeHours,
             image: pharmacy.image || '',
+            latitude: pharmacy.latitude,
+            longLatitude: pharmacy.longLatitude,
         },
-        validationSchema: pharmacySchema,
-        onSubmit: (values) => {
-            onSubmit(values);
+        validationSchema: pharmacyFormSchema,
+        onSubmit: async (values) => {
+            const formData = new FormData();
+            Object.entries(values).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    if (key === 'image' && value instanceof File) {
+                        formData.append('image', value);
+                    } else {
+                        formData.append(key, value.toString());
+                    }
+                }
+            });
+            await onSubmit(formData);
         },
     });
 
-    const handleImageChange = async (
-        e: React.ChangeEvent<HTMLInputElement>,
-        setFieldValue: (field: string, value: any) => void
-    ) => {
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
-
-        // Validation de la taille
-        if (file.size > PHARMACY_VALIDATION.IMAGE.MAX_SIZE) {
-            alert(t('image too large'));
-            return;
+        if (file) {
+            formik.setFieldValue('image', file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
         }
-
-        // Validation du type
-        if (!PHARMACY_VALIDATION.IMAGE.ACCEPTED_TYPES.includes(file.type as any)) {
-            alert(t('invalid image type'));
-            return;
-        }
-
-        // Convertir en base64
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setFieldValue('image', reader.result);
-        };
-        reader.readAsDataURL(file);
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={formik.handleSubmit} className="space-y-6">
             {/* Image Upload */}
             <div className="flex justify-center">
                 <div className="relative group w-36 h-32">
-                    <div className={`w-full h-full rounded-xl overflow-hidden border-2
-                     ${values.image ? 'border-primary border-dashed' : 'border-dashed border-primary dark:border-gray-500'}
-                     hover:border-primary transition-colors`}>
-                        {values.image ? (
+                    <div className={`
+                        w-full h-full rounded-xl overflow-hidden border-2
+                        ${preview ? 'border-primary' : 'border-dashed border-primary dark:border-gray-500'}
+                        hover:border-primary transition-colors
+                    `}>
+                        {preview ? (
                             <div className="relative h-full">
                                 <img
-                                    src={values.image}
-                                    alt={values.name}
+                                    src={preview}
+                                    alt={formik.values.name}
                                     className="w-full h-full object-cover"
                                 />
                                 <button
                                     type="button"
-                                    onClick={() => setFieldValue('image', '')}
+                                    onClick={() => {
+                                        setPreview('');
+                                        formik.setFieldValue('image', undefined);
+                                    }}
                                     className="absolute top-2 right-2 p-1 bg-red-500/80 
-                                 rounded-full text-white opacity-0 
-                                 group-hover:opacity-100 transition-opacity"
+                                             rounded-full text-white opacity-0 
+                                             group-hover:opacity-100 transition-opacity"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -110,7 +97,7 @@ const PharmacyUpdateForm = ({ pharmacy, onSubmit, onCancel, isLoading, isRTL }: 
                     <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => handleImageChange(e, setFieldValue)}
+                        onChange={handleImageChange}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
                 </div>
@@ -118,55 +105,76 @@ const PharmacyUpdateForm = ({ pharmacy, onSubmit, onCancel, isLoading, isRTL }: 
 
             {/* Form Fields */}
             <div className="space-y-4">
-                <InputField
-                    name="name"
-                    value={values.name}
-                    onChange={handleChange}
-                    label={t('pharmacy name')}
-                    startIcon={Building2}
-                    error={touched.name && errors.name ? errors.name : ''}
-                    placeholder={t('enter pharmacy name')}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                    <InputField
+                        name="name"
+                        value={formik.values.name}
+                        onChange={formik.handleChange}
+                        label={t('pharmacy name')}
+                        startIcon={Building2}
+                        error={formik.touched.name && formik.errors.name ? formik.errors.name : ''}
+                        placeholder={t('enter pharmacy name')}
+                    />
+                    <InputField
+                        name="telephone"
+                        value={formik.values.telephone}
+                        onChange={formik.handleChange}
+                        label={t('phone')}
+                        startIcon={Phone}
+                        error={formik.touched.telephone && formik.errors.telephone ? formik.errors.telephone : ''}
+                        placeholder={t('enter phone number')}
+                        dir="ltr"
+                    />
+                </div>
 
                 <InputField
                     name="address"
-                    value={values.address}
-                    onChange={handleChange}
-                    label={t('pharmacy address')}
+                    value={formik.values.address}
+                    onChange={formik.handleChange}
+                    label={t('address')}
                     startIcon={MapPin}
-                    error={touched.address && errors.address ? errors.address : ''}
+                    error={formik.touched.address && formik.errors.address ? formik.errors.address : ''}
                     placeholder={t('enter address')}
-                />
-
-                <InputField
-                    name="phone"
-                    value={values.phone}
-                    onChange={handleChange}
-                    label={t('pharmacy phone')}
-                    startIcon={Phone}
-                    error={touched.phone && errors.phone ? errors.phone : ''}
-                    placeholder={t('enter phone')}
-                    dir="ltr"
                 />
 
                 <div className="grid grid-cols-2 gap-4">
                     <InputField
-                        type="time"
-                        name="openHour"
-                        value={values.openHour}
-                        onChange={handleChange}
-                        label={t('opening hour')}
-                        error={touched.openHour && errors.openHour ? errors.openHour : ''}
-                        dir="ltr"
+                        name="latitude"
+                        label={t('latitude')}
+                        type="text"
+                        value={formik.values.latitude}
+                        onChange={formik.handleChange}
+                        error={formik.touched.latitude && formik.errors.latitude ? formik.errors.latitude : ''}
+                        placeholder={t('enter latitude')}
                     />
+                    <InputField
+                        name="longLatitude"
+                        label={t('longitude')}
+                        type="text"
+                        value={formik.values.longLatitude}
+                        onChange={formik.handleChange}
+                        error={formik.touched.longLatitude && formik.errors.longLatitude ? formik.errors.longLatitude : ''}
+                        placeholder={t('enter longitude')}
+                    />
+                </div>
 
+                <div className="grid grid-cols-2 gap-4">
                     <InputField
                         type="time"
-                        name="closeHour"
-                        value={values.closeHour}
-                        onChange={handleChange}
+                        name="openHours"
+                        value={formik.values.openHours}
+                        onChange={formik.handleChange}
+                        label={t('opening hour')}
+                        error={formik.touched.openHours && formik.errors.openHours ? formik.errors.openHours : ''}
+                        dir="ltr"
+                    />
+                    <InputField
+                        type="time"
+                        name="closeHours"
+                        value={formik.values.closeHours}
+                        onChange={formik.handleChange}
                         label={t('closing hour')}
-                        error={touched.closeHour && errors.closeHour ? errors.closeHour : ''}
+                        error={formik.touched.closeHours && formik.errors.closeHours ? formik.errors.closeHours : ''}
                         dir="ltr"
                     />
                 </div>
@@ -187,7 +195,7 @@ const PharmacyUpdateForm = ({ pharmacy, onSubmit, onCancel, isLoading, isRTL }: 
                 </button>
                 <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || formik.isSubmitting}
                     className="w-full px-4 py-2.5 text-sm font-medium text-white 
                              bg-primary rounded-lg hover:bg-primary-dark 
                              disabled:opacity-50 disabled:cursor-not-allowed
@@ -204,4 +212,4 @@ const PharmacyUpdateForm = ({ pharmacy, onSubmit, onCancel, isLoading, isRTL }: 
     );
 };
 
-export default PharmacyUpdateForm; 
+export default PharmacyUpdateForm;
